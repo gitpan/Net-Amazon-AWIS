@@ -1,4 +1,9 @@
 Revision history for Perl module Net::Amazon::AWIS:
 
+0.30
+     - fix minor POD issue
+     - oops, used DateTime::Format::StrpTime when I really meant
+       DateTime::Format::Strptime (spotted by Mike Castle)
+
 0.29 Thu Mar 17 22:42:04 EST 2005
      - initial release

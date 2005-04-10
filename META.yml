@@ -1,13 +1,13 @@
 --- #YAML:1.0
 name: Net-Amazon-AWIS
-version: 0.29
+version: 0.30
 author:
   - Leon Brocard C<acme@astray.com>
-abstract: ~
+abstract: Use the Amazon Alexa Web Information Service
 license: perl
 requires:
   Class::Accessor::Fast: 0
-  DateTime::Format::StrpTime: 0
+  DateTime::Format::Strptime: 0
   IO::Prompt: 0
   LWP::UserAgent: 0
   Module::Build: 0
@@ -18,5 +18,5 @@ requires:
 provides:
   Net::Amazon::AWIS:
     file: lib/Net/Amazon/AWIS.pm
-    version: 0.29
+    version: 0.30
 generated_by: Module::Build version 0.2605

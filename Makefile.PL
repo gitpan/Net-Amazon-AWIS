@@ -6,7 +6,7 @@ WriteMakefile
           'VERSION_FROM' => 'lib/Net/Amazon/AWIS.pm',
           'PREREQ_PM' => {
                            'Class::Accessor::Fast' => '0',
-                           'DateTime::Format::StrpTime' => '0',
+                           'DateTime::Format::Strptime' => '0',
                            'IO::Prompt' => '0',
                            'LWP::UserAgent' => '0',
                            'Module::Build' => '0',

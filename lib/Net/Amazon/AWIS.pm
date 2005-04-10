@@ -1,12 +1,12 @@
 package Net::Amazon::AWIS;
 use strict;
-use DateTime::Format::StrpTime;
+use DateTime::Format::Strptime;
 use LWP::UserAgent;
 use URI;
 use URI::QueryParam;
 use XML::LibXML;
 use XML::LibXML::XPathContext;
-our $VERSION = "0.29";
+our $VERSION = "0.30";
 use base qw(Class::Accessor::Fast);
 __PACKAGE__->mk_accessors(qw(libxml subscription_id ua));
 
@@ -219,7 +219,7 @@ __END__
 
 =head1 NAME
 
-Net::Amazon::AWIS- Use the Amazon Alexa Web Information Service
+Net::Amazon::AWIS - Use the Amazon Alexa Web Information Service
 
 =head1 SYNOPSIS
 
