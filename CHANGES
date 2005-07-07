@@ -1,6 +1,12 @@
 Revision history for Perl module Net::Amazon::AWIS:
 
-0.30
+0.31 Thu Jul  7 09:32:57 BST 2005
+     - fix due to XML namespace change, add a count option to crawl()
+       (thanks to mah)
+     - update the tests
+     - added pod coverage test
+
+0.30 Thu April 10 12:22:54 EST 2005
      - fix minor POD issue
      - oops, used DateTime::Format::StrpTime when I really meant
        DateTime::Format::Strptime (spotted by Mike Castle)

@@ -6,7 +6,7 @@ use URI;
 use URI::QueryParam;
 use XML::LibXML;
 use XML::LibXML::XPathContext;
-our $VERSION = "0.30";
+our $VERSION = "0.31";
 use base qw(Class::Accessor::Fast);
 __PACKAGE__->mk_accessors(qw(libxml subscription_id ua));
 
@@ -105,6 +105,9 @@ sub crawl {
     Operation => 'Crawl',
     Url => $options{url},
     ResponseGroup => 'MetaData',
+    Count => $options{count} &&
+             $options{count} >= 0 &&
+             $options{count} < 10 ? $options{count} : 10,
   };
 
   my $xpc = $self->_request($parms);
@@ -201,7 +204,7 @@ sub _request {
   my $doc = $self->libxml->parse_string($xml);
 
   my $xpc = XML::LibXML::XPathContext->new($doc);
-  $xpc->registerNs('awis', 'http://webservices.amazon.com/AWSAlexa/2004-09-15');
+  $xpc->registerNs('awis', 'http://webservices.amazon.com/AWSAlexa/2005-02-01');
 
 #  warn $doc->toString(1);
 
@@ -318,16 +321,16 @@ Amazon will only be able to provide links pointing in.
 
 =head2 crawl
 
-The crawl method returns information about a specific URL as provided
-by the most recent Alexa Web Crawls. Information about the last few
-times the site URL was crawled is returned.
+The crawl method returns information about a specific URL as provided by
+the most recent Alexa Web Crawls. Information about the last few times
+the site URL was crawled is returned. Crawl takes the URL and a count.
 
 Information per crawl include: URL, IP address, date of the crawl (as
 a DateTime object), status code, page length, content type and language.
 In addition, a list of other URLs is included (like "rel" URLs), as is
 the list of images and links found.
 
-  my @results = $awis->crawl(url => "http://use.perl.org");
+  my @results = $awis->crawl(url => "http://use.perl.org", count => 10);
   foreach my $result (@results) {
     print "URL: "          . $result->{url} . "\n";
     print "IP: "           . $result->{ip} . "\n";
@@ -423,27 +426,4 @@ Leon Brocard C<acme@astray.com>
 Copyright (c) 2005, Leon Brocard C<acme@astray.com>. All rights reserved.           
                                                                                 
 This module is free software; you can redistribute it and/or                    
-modify it under the same terms as Perl itself.                                  
-                                                                                
-=head1 DISCLAIMER OF WARRANTY                                                   
-
-BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY          
-FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN        
-OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES          
-PROVIDE THE SOFTWARE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER               
-EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED                
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE  
-ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH           
-YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL            
-NECESSARY SERVICING, REPAIR, OR CORRECTION.                                     
-                                                                                
-IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING           
-WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR             
-REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE                 
-LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL,          
-OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE             
-THE SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING           
-RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A            
-FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF            
-SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF               
-SUCH DAMAGES.
+modify it under the same terms as Perl itself.

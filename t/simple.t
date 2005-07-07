@@ -43,21 +43,21 @@ $data = $awis->web_map(url => "http://use.perl.org");
 ok(scalar(@{$data->{links_in}}) > 5, "links_in");
 ok(scalar(@{$data->{links_out}}) > 5, "links_out");
 
-my @results = $awis->crawl(url => "http://use.perl.org");
-is(scalar(@results), 10, "Ten results");
+my @results = $awis->crawl(url => "http://www.cpan.org", count => 10);
+cmp_ok(scalar(@results), '==', 10, "At least ten results");
 
 foreach my $result (@results) {
-  is($result->{url}, "http://use.perl.org:80/", "url");
-  is($result->{ip}, "66.35.250.197", "ip");
+  like($result->{url}, qr{http://(www\.)?cpan\.org:80/}, "url");
+  is($result->{ip}, "66.39.76.93", "ip");
   isa_ok($result->{date}, 'DateTime', "date");
   is($result->{content_type}, "text/html", "content type is text/html");
   is($result->{code}, 200, "code");
-  ok($result->{length} > 30_000, "length > 30_000");
+  cmp_ok($result->{length}, '>', 5_000, "length > 5_000");
   is($result->{language}, "en.us-ascii", "language is en.us-ascii");
 
-  ok(scalar(@{$result->{other_urls}}) > 3, "> 3 other urls");
-  ok(scalar(@{$result->{images}}) > 8, "> 8 images");
-  ok(scalar(@{$result->{links}}) > 50, "> 50 links");
+  cmp_ok(scalar(@{$result->{other_urls}}), '==', 0, "0 other urls");
+  cmp_ok(scalar(@{$result->{images}}), '>=', 2, ">= 2 images");
+  cmp_ok(scalar(@{$result->{links}}), '>=', 15, ">= 15 links");
 };
 
 my @links = $awis->search(query => 'leon brocard', relevance => 4);
