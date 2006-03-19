@@ -6,12 +6,14 @@ use URI;
 use URI::QueryParam;
 use XML::LibXML;
 use XML::LibXML::XPathContext;
-our $VERSION = "0.31";
+use Digest::HMAC_SHA1;
+use POSIX qw( strftime );
 use base qw(Class::Accessor::Fast);
-__PACKAGE__->mk_accessors(qw(libxml subscription_id ua));
+__PACKAGE__->mk_accessors(qw(libxml aws_access_key_id secret_access_key ua));
+our $VERSION = "0.32";
 
 sub new {
-  my($class, $subscription_id) = @_;
+  my($class, $aws_access_key_id, $secret_access_key) = @_;
   my $self = {};
   bless $self, $class;
 
@@ -19,7 +21,8 @@ sub new {
   $ua->timeout(30);
   $self->ua($ua);
   $self->libxml(XML::LibXML->new);
-  $self->subscription_id($subscription_id);
+  $self->aws_access_key_id($aws_access_key_id);
+  $self->secret_access_key($secret_access_key);
   return $self;
 }
 
@@ -75,7 +78,7 @@ sub web_map {
     Operation => 'WebMap',
     Url => $options{url},
     ResponseGroup => 'LinksIn,LinksOut',
-    Count => $options{count} || 100,
+    Count => $options{count} || 20,
     Start => $options{start} || 0,
   };
 
@@ -188,9 +191,14 @@ sub _request {
   my($self, $parms) = @_;
 #  sleep 1;
 
-  $parms->{SubscriptionId} = $self->subscription_id;
+  $parms->{Service} = 'AlexaWebInfoService';
+  $parms->{AWSAccessKeyId} = $self->aws_access_key_id;
+  $parms->{Timestamp} = strftime '%Y-%m-%dT%H:%M:%S.000Z', gmtime;
+  my $hmac = Digest::HMAC_SHA1->new($self->secret_access_key);
+  $hmac->add( $parms->{Service} . $parms->{Operation} . $parms->{Timestamp} );
+  $parms->{Signature} = $hmac->b64digest . '=';
 
-  my $url = "http://aws-beta.amazon.com/onca/xml?Service=AlexaWebInfoService";
+  my $url = 'http://awis.amazonaws.com/onca/xml';
 
   my $uri = URI->new($url);
   $uri->query_param($_, $parms->{$_}) foreach keys %$parms;
@@ -204,7 +212,7 @@ sub _request {
   my $doc = $self->libxml->parse_string($xml);
 
   my $xpc = XML::LibXML::XPathContext->new($doc);
-  $xpc->registerNs('awis', 'http://webservices.amazon.com/AWSAlexa/2005-02-01');
+  $xpc->registerNs('awis', 'http://webservices.amazon.com/AWSAlexa/2005-07-11');
 
 #  warn $doc->toString(1);
 
@@ -264,10 +272,11 @@ API reference. Upon errors, an exception is thrown.
 =head2 new
 
 The constructor method creates a new Net::Amazon::AWIS
-object. You must pass in an Amazon Web Services Subscription ID. See
+object. You must pass in an Amazon Web Services Access Key ID
+and a Secret Access Key. See
 http://www.amazon.com/gp/aws/landing.html:
 
-  my $sq = Net::Amazon::AWIS->new($subscription_id);
+  my $sq = Net::Amazon::AWIS->new($aws_access_key_id, $secret_access_key);
 
 =head2 url_info
 

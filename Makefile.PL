@@ -7,6 +7,7 @@ WriteMakefile
           'PREREQ_PM' => {
                            'Class::Accessor::Fast' => '0',
                            'DateTime::Format::Strptime' => '0',
+                           'Digest::HMAC_SHA1' => '0',
                            'IO::Prompt' => '0',
                            'LWP::UserAgent' => '0',
                            'Module::Build' => '0',

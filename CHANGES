@@ -1,5 +1,10 @@
 Revision history for Perl module Net::Amazon::AWIS:
 
+0.32 Sun Mar 19 17:25:57 GMT 2006
+     - fixes as AWIS now requires using an AWS Access Key ID and a
+       Secret Access Key to calculate a signature, and the web service URL
+       and namespace URI have changed (patch by KCIVEY)
+
 0.31 Thu Jul  7 09:32:57 BST 2005
      - fix due to XML namespace change, add a count option to crawl()
        (thanks to mah)
