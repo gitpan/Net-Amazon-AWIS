@@ -10,218 +10,199 @@ use Digest::HMAC_SHA1;
 use POSIX qw( strftime );
 use base qw(Class::Accessor::Fast);
 __PACKAGE__->mk_accessors(qw(libxml aws_access_key_id secret_access_key ua));
-our $VERSION = "0.32";
+our $VERSION = "0.33";
 
 sub new {
-  my($class, $aws_access_key_id, $secret_access_key) = @_;
-  my $self = {};
-  bless $self, $class;
+    my ( $class, $aws_access_key_id, $secret_access_key ) = @_;
+    my $self = {};
+    bless $self, $class;
 
-  my $ua = LWP::UserAgent->new;
-  $ua->timeout(30);
-  $self->ua($ua);
-  $self->libxml(XML::LibXML->new);
-  $self->aws_access_key_id($aws_access_key_id);
-  $self->secret_access_key($secret_access_key);
-  return $self;
+    my $ua = LWP::UserAgent->new;
+    $ua->timeout(30);
+    $self->ua($ua);
+    $self->libxml( XML::LibXML->new );
+    $self->aws_access_key_id($aws_access_key_id);
+    $self->secret_access_key($secret_access_key);
+    return $self;
 }
 
 sub url_info {
-  my($self, %options) = @_;
+    my ( $self, %options ) = @_;
 
-  my $parms = {
-    Operation => 'UrlInfo',
-    Url => $options{url},
-    ResponseGroup => 'AdultContent,Categories,Language,Rank,Related,Speed',
-  };
-
-  my $xpc = $self->_request($parms);
-
-  my @categories;
-  foreach my $node ($xpc->findnodes("//awis:CategoryData")) {
-    my $title = $xpc->findvalue(".//awis:Title", $node);
-    my $path  = $xpc->findvalue(".//awis:AbsolutePath", $node);
-    push @categories, {
-      title => $title,
-      path => $path,
+    my $parms = {
+        Operation => 'UrlInfo',
+        Url       => $options{url},
+        ResponseGroup =>
+            'AdultContent,Categories,Language,Rank,Related,Speed',
     };
-  };
 
-  my @related;
-  foreach my $node ($xpc->findnodes("//awis:RelatedLink")) {
-    push @related, {
-      canonical => $xpc->findvalue(".//awis:DataUrl", $node),
-      url => $xpc->findvalue(".//awis:NavigableUrl", $node),
-      relevance => $xpc->findvalue(".//awis:Relevance", $node),
-      title => $xpc->findvalue(".//awis:Title", $node),
+    my $xpc = $self->_request($parms);
+
+    my @categories;
+    foreach my $node ( $xpc->findnodes("//CategoryData") ) {
+        my $title = $xpc->findvalue( ".//Title",        $node );
+        my $path  = $xpc->findvalue( ".//AbsolutePath", $node );
+        push @categories,
+            {
+            title => $title,
+            path  => $path,
+            };
+    }
+
+    my @related;
+    foreach my $node ( $xpc->findnodes("//RelatedLink") ) {
+        push @related,
+            {
+            canonical => $xpc->findvalue( ".//DataUrl",      $node ),
+            url       => $xpc->findvalue( ".//NavigableUrl", $node ),
+            relevance => $xpc->findvalue( ".//Relevance",    $node ),
+            title     => $xpc->findvalue( ".//Title",        $node ),
+            };
+    }
+
+    my $data = {
+        adult_content => $xpc->findvalue(".//Content") eq 'yes',
+        categories => \@categories,
+        encoding => $xpc->findvalue(".//Alexa/ContentData/Language/Encoding"),
+        locale   => $xpc->findvalue(".//Alexa/ContentData/Language/Locale"),
+        median_load_time =>
+            $xpc->findvalue(".//Alexa/ContentData/Speed/MedianLoadTime"),
+        percentile_load_time =>
+            $xpc->findvalue(".//Alexa/ContentData/Speed/Percentile"),
+        rank    => $xpc->findvalue(".//Alexa/TrafficData/Rank"),
+        related => \@related,
     };
-  }
-
-  my $data = {
-    adult_content =>
-      $xpc->findvalue(".//awis:Alexa/awis:ContentData/awis:AdultContent") eq 'yes', 
-    categories => \@categories,
-    encoding => $xpc->findvalue(".//awis:Alexa/awis:ContentData/awis:Language/awis:Encoding"),
-    locale => $xpc->findvalue(".//awis:Alexa/awis:ContentData/awis:Language/awis:Locale"),
-    median_load_time => $xpc->findvalue(".//awis:Alexa/awis:ContentData/awis:Speed/awis:MedianLoadTime"),
-    percentile_load_time => $xpc->findvalue(".//awis:Alexa/awis:ContentData/awis:Speed/awis:Percentile"),
-    rank => $xpc->findvalue(".//awis:Alexa/awis:TrafficData/awis:Rank"),
-    related => \@related,
-  };
-  return $data;
+    return $data;
 }
 
 sub web_map {
-  my($self, %options) = @_;
+    my ( $self, %options ) = @_;
 
-  my $parms = {
-    Operation => 'WebMap',
-    Url => $options{url},
-    ResponseGroup => 'LinksIn,LinksOut',
-    Count => $options{count} || 20,
-    Start => $options{start} || 0,
-  };
+    my $parms = {
+        Operation     => 'SitesLinkingIn',
+        Url           => $options{url},
+        ResponseGroup => 'SitesLinkingIn',
+        Count         => $options{count} || 20,
+        Start         => $options{start} || 0,
+    };
 
-  my $xpc = $self->_request($parms);
+    my $xpc = $self->_request($parms);
 
-  my @in;
-  foreach my $node ($xpc->findnodes("//awis:LinksPointingIn/awis:Results/awis:Result")) {
-    my $url = $xpc->findvalue(".//awis:DataUrl", $node);
-    push @in, $url;
-  };
-  my @out;
-  foreach my $node ($xpc->findnodes("//awis:LinksPointingOut/awis:Results/awis:Result")) {
-    my $url = $xpc->findvalue(".//awis:DataUrl", $node);
-    push @out, $url;
-  };
+    my @in;
+    foreach my $node ( $xpc->findnodes("//Site") ) {
+        my $url = $xpc->findvalue( ".//Url", $node );
+        push @in, $url;
+    }
 
-  return {
-    links_in  => \@in,
-    links_out => \@out,
-  };
+    my @out;
+    return {
+        links_in  => \@in,
+        links_out => \@out,
+    };
 }
 
 sub crawl {
-  my($self, %options) = @_;
+    my ( $self, %options ) = @_;
 
-  my $parms = {
-    Operation => 'Crawl',
-    Url => $options{url},
-    ResponseGroup => 'MetaData',
-    Count => $options{count} &&
-             $options{count} >= 0 &&
-             $options{count} < 10 ? $options{count} : 10,
-  };
-
-  my $xpc = $self->_request($parms);
-
-  my $format = new DateTime::Format::Strptime(
-    pattern     => '%Y%m%d%H%M%S',
-  );
-
-  my @results;
-  foreach my $node ($xpc->findnodes("//awis:MetaData")) {
-    my @other_urls;
-    foreach my $subnode ($xpc->findnodes(".//awis:OtherUrl", $node)) {
-      push @other_urls, 'http://' . $subnode->textContent;
-    }
-    my @images;
-    foreach my $subnode ($xpc->findnodes(".//awis:Image", $node)) {
-      push @images, 'http://' . $subnode->textContent;
-    }
-    my @links;
-    foreach my $subnode ($xpc->findnodes(".//awis:Link", $node)) {
-      push @links, {
-	name => $xpc->findvalue(".//awis:Name", $subnode),
-	uri => 'http://' . $xpc->findvalue(".//awis:LocationURI", $subnode),
-      };
-    }
-
-    my $result = {
-      url => $xpc->findvalue(".//awis:RequestInfo/awis:OriginalRequest", $node),
-      ip => $xpc->findvalue(".//awis:RequestInfo/awis:IPAddress", $node),
-      date => $format->parse_datetime($xpc->findvalue(".//awis:RequestInfo/awis:RequestDate", $node)),
-      content_type => $xpc->findvalue(".//awis:RequestInfo/awis:ContentType", $node),
-      code => $xpc->findvalue(".//awis:RequestInfo/awis:ResponseCode", $node),
-      length => $xpc->findvalue(".//awis:RequestInfo/awis:Length", $node),
-      language => (split(' ', $xpc->findvalue(".//awis:RequestInfo/awis:Language", $node)))[0],
-      images => \@images,
-      other_urls => \@other_urls,
-      links => \@links,
+    my $parms = {
+        Operation     => 'Crawl',
+        Url           => $options{url},
+        ResponseGroup => 'MetaData',
+        Count         => $options{count}
+            && $options{count} >= 0
+            && $options{count} < 10 ? $options{count} : 10,
     };
-    push @results, $result;
-  }
-  return @results;
-}
 
-sub search {
-  my($self, %options) = @_;
+    my $xpc = $self->_request($parms);
 
-  my $parms = {
-    Operation => 'Search',
-    Query => $options{query},
-    ResponseGroup => 'Web',
-  };
+    my $format = new DateTime::Format::Strptime( pattern => '%Y%m%d%H%M%S', );
 
-  $parms->{TimeOut} = $options{timeout} if $options{timeout};
-  $parms->{MaxResultsPerHost} = $options{max_results_per_host} if $options{max_results_per_host};
-  $parms->{DuplicateCheck} = $options{duplicate_check} if $options{duplicate_check};
-  $parms->{CountOnly} = $options{count_only} if $options{count_only};
-  $parms->{Context} = $options{context} if $options{context};
-  $parms->{Relevance} = $options{relevance} if $options{relevance};
-  $parms->{IgnoreWords} = $options{ignore_words} if $options{ignore_words};
-  $parms->{Start} = $options{start} if $options{start};
-  $parms->{Count} = $options{count} if $options{count};
-  $parms->{AdultFilter} = $options{adult_filter} if $options{adult_filter};
+    my @results;
+    foreach my $node ( $xpc->findnodes("//MetaData") ) {
 
-  my $xpc = $self->_request($parms);
+        my @other_urls;
+        foreach my $subnode ( $xpc->findnodes( ".//OtherUrl", $node ) ) {
+            push @other_urls, 'http://' . $subnode->textContent;
 
-  my @links;
-  foreach my $node ($xpc->findnodes(".//awis:Result")) {
-    push @links, {
-      title => $xpc->findvalue(".//awis:Title", $node),
-      uri => 'http://' . $xpc->findvalue(".//awis:DataUrl", $node),
-      score => $xpc->findvalue(".//awis:Score", $node),
-    };
-  }
-  return @links;
+        }
+        my @images;
+        foreach my $subnode ( $xpc->findnodes( ".//Image", $node ) ) {
+            push @images, 'http://' . $subnode->textContent;
+        }
+        my @links;
+        foreach my $subnode ( $xpc->findnodes( ".//Link", $node ) ) {
+            push @links,
+                {
+                name => $xpc->findvalue( ".//Name", $subnode ),
+                uri  => 'http://'
+                    . $xpc->findvalue( ".//LocationURI", $subnode ),
+                };
+        }
+
+        my $result = {
+            url => $xpc->findvalue( ".//RequestInfo/OriginalRequest", $node ),
+            ip  => $xpc->findvalue( ".//RequestInfo/IPAddress",       $node ),
+            date => $format->parse_datetime(
+                $xpc->findvalue( ".//RequestInfo/RequestDate", $node )
+            ),
+            content_type =>
+                $xpc->findvalue( ".//RequestInfo/ContentType", $node ),
+            code   => $xpc->findvalue( ".//RequestInfo/ResponseCode", $node ),
+            length => $xpc->findvalue( ".//RequestInfo/Length",       $node ),
+            language => (
+                split(
+                    ' ', $xpc->findvalue( ".//RequestInfo/Language", $node )
+                )
+                )[0],
+            images     => \@images,
+            other_urls => \@other_urls,
+            links      => \@links,
+        };
+        push @results, $result;
+    }
+    return @results;
 }
 
 sub _request {
-  my($self, $parms) = @_;
-#  sleep 1;
+    my ( $self, $parms ) = @_;
 
-  $parms->{Service} = 'AlexaWebInfoService';
-  $parms->{AWSAccessKeyId} = $self->aws_access_key_id;
-  $parms->{Timestamp} = strftime '%Y-%m-%dT%H:%M:%S.000Z', gmtime;
-  my $hmac = Digest::HMAC_SHA1->new($self->secret_access_key);
-  $hmac->add( $parms->{Service} . $parms->{Operation} . $parms->{Timestamp} );
-  $parms->{Signature} = $hmac->b64digest . '=';
+    #  sleep 1;
 
-  my $url = 'http://awis.amazonaws.com/onca/xml';
+    $parms->{Service}        = 'AlexaWebInfoService';
+    $parms->{AWSAccessKeyId} = $self->aws_access_key_id;
+    $parms->{Timestamp}      = strftime '%Y-%m-%dT%H:%M:%S.000Z', gmtime;
+    my $hmac = Digest::HMAC_SHA1->new( $self->secret_access_key );
+    $hmac->add(
+        $parms->{Service} . $parms->{Operation} . $parms->{Timestamp} );
+    $parms->{Signature} = $hmac->b64digest . '=';
 
-  my $uri = URI->new($url);
-  $uri->query_param($_, $parms->{$_}) foreach keys %$parms;
-  my $response = $self->ua->get("$uri");
+    my $url = 'http://awis.amazonaws.com/';
 
-#  die $uri;
+    my $uri = URI->new($url);
+    $uri->query_param( $_, $parms->{$_} ) foreach keys %$parms;
+    my $response = $self->ua->get("$uri");
 
-  die "Error fetching response: " . $response->status_line unless $response->is_success;
+    #warn $uri;
+    #warn $response->as_string;
 
-  my $xml = $response->content;
-  my $doc = $self->libxml->parse_string($xml);
+    die "Error fetching response: " . $response->status_line
+        unless $response->is_success;
 
-  my $xpc = XML::LibXML::XPathContext->new($doc);
-  $xpc->registerNs('awis', 'http://webservices.amazon.com/AWSAlexa/2005-07-11');
+    my $xml = $response->content;
+    $xml =~ s{<aws:}{<}g;      # hates-xml-namespaces
+    $xml =~ s{</aws:}{</}g;    # hates-xml-namespaces
+    my $doc = $self->libxml->parse_string($xml);
 
-#  warn $doc->toString(1);
+    my $xpc = XML::LibXML::XPathContext->new($doc);
 
-  if ($xpc->findnodes("//awis:Error")) {
-    die $xpc->findvalue("//awis:Error/awis:Code") . ": " .
-      $xpc->findvalue("//awis:Error/awis:Message");
-  }
+    #warn $doc->toString(1);
 
-  return $xpc;
+    if ( $xpc->findnodes("//Error") ) {
+        die $xpc->findvalue("//ErrorCode") . ": "
+            . $xpc->findvalue("//ErrorMessage");
+    }
+
+    return $xpc;
 }
 
 1;
@@ -315,18 +296,13 @@ site is in, and related sites:
 
 =head2 web_map
 
-The web_map method provides complete listing of all known links
-pointing in and links pointing out for any page/URL on the web. Web
-Maps have been found to be useful when creating new search engine
-algorithms. As of October 2004, there are 17 billion nodes in the web
-map, based on 4 million text/html pages crawled. For the 4 billion
-URLs crawled, Amazon will be able to provide both links pointing in
-and links pointing out information. For the remaining 13 billion URLs,
-Amazon will only be able to provide links pointing in.
+The web_map method returns a list of web sites linking to a 
+given web site. Within each domain linking into the web site, only 
+a single link - the one with the highest page-level traffic - is 
+returned. The data is updated once every two months.
 
   my $data = $awis->web_map(url => "http://use.perl.org");
   my @links_in  = $data->{links_in};
-  my @links_out = $data->{links_out};
 
 =head2 crawl
 
@@ -364,63 +340,10 @@ the list of images and links found.
     }
   }
 
-=head2 search
-
-The search method may be used to retrieve a list of search results
-that match one or more keywords. The Web Search is based on an Alexa
-index of the web that, as of August 2004, has over 4 billion
-URLs. Options are as follows:
-
-timeout: Time in milliseconds to wait for a response. to wait for a
-response. Web Search will attempt to respond with as many results as
-possible within the timeout period. '0' means inifinite. Default value
-is '3000'.
-
-max_results_per_host: Maximum number of results to return from any one
-site. '0' means no limit. Default value is '5.'
-
-duplicate_check: set to 'yes' to filter out results that are
-substantially similar to those already shown. Default value is 'yes'.
-
-count_only: setting to 'yes' will return only a count of matching
-sites. Default value is 'no.'
-
-context: setting to 'yes' will return a Context node beneath each
-Result, indicating where keyword(s) match within the document. Default
-value is 'yes.'
-
-relevance: allows faster searching with weak relevance (0) to slow
-searching with strong relevance checking (4). Default value is '0.'
-
-ignore_words: query terms appearing in nore than this percent of all pages in our
-index will be ignored.
-
-start: number of result at which to start. Used for paging through
-results. Default value is '0.'
-
-count: number of results (maximum) per page to return. Note that the
-response document may contain fewer results than this maximum. Default
-value is '10' (maximum 1000).
-
-adult_filter: filter for adult content. 'Yes' will provide strict filtering of
-results, showing only sites that are explicitly identified as not
-adult. 'Moderate' will filter sitse that are identified as adult, but
-allow unknowns to be included. Default value is 'no.'
-
-Note: the results from this search seem to be less accurate than other
-web search engines.
-
-  my @links = $awis->search(query => 'leon brocard');
-  foreach my $link (@links) {
-    my $score = $link->{score};
-    my $uri   = $link->{uri};
-    my $title = $link->{title} || "No title";
-    print "$uri $title ($score)\n";
-  }
-
 =head1 BUGS AND LIMITATIONS                                                     
                                                                                 
-No bugs have been reported. This module currently does not support "Category" searches.
+This module currently does not support "Browse Category" or
+"Historical Traffic" searches.
                                                                                 
 Please report any bugs or feature requests to                                   
 C<bug-<Net-Amazon-AWIS>@rt.cpan.org>, or through the web interface at                   
@@ -432,7 +355,7 @@ Leon Brocard C<acme@astray.com>
 
 =head1 LICENCE AND COPYRIGHT                                                    
                                                                                 
-Copyright (c) 2005, Leon Brocard C<acme@astray.com>. All rights reserved.           
+Copyright (c) 2005-8, Leon Brocard C<acme@astray.com>. All rights reserved.           
                                                                                 
 This module is free software; you can redistribute it and/or                    
 modify it under the same terms as Perl itself.
