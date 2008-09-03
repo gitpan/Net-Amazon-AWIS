@@ -1,5 +1,8 @@
 Revision history for Perl module Net::Amazon::AWIS:
 
+0.34 Wed Sep  3 23:18:05 BST 2008
+	- add history method
+
 0.33 Wed Jan 16 08:05:33 GMT 2008
      - perltidy
      - fix to work with the new version of web service

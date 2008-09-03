@@ -10,7 +10,7 @@ use Digest::HMAC_SHA1;
 use POSIX qw( strftime );
 use base qw(Class::Accessor::Fast);
 __PACKAGE__->mk_accessors(qw(libxml aws_access_key_id secret_access_key ua));
-our $VERSION = "0.33";
+our $VERSION = "0.34";
 
 sub new {
     my ( $class, $aws_access_key_id, $secret_access_key ) = @_;
@@ -162,6 +162,46 @@ sub crawl {
     }
     return @results;
 }
+
+
+sub history {
+    my ( $self, %options ) = @_;
+
+	my $range = defined $options{days} ? $options{days} : 31;
+    my $parms = {
+        Operation => 'TrafficHistory',
+        Url       => $options{url},
+        ResponseGroup =>
+            'History',
+		Start		=> defined $options{start}
+						? $options{start}
+						: strftime('%Y%m%d', gmtime(time() - 86400*($range + 1))),
+		Range		=> $range,
+    };
+
+    my $xpc = $self->_request($parms);
+
+    my @history;
+    foreach my $node ( $xpc->findnodes("//TrafficHistory/HistoricalData/Data") ) {
+        my $date = $xpc->findvalue( ".//Date",        $node );
+        my $perm  = $xpc->findvalue( ".//PageViews/PerMillion", $node );
+        my $peru  = $xpc->findvalue( ".//PageViews/PerUser", $node );
+        push @history,
+            {
+			date		=> $date,
+			rank		=> $xpc->findvalue(".//Rank", $node),
+            viewspermillion	=>
+				$xpc->findvalue(".//PageViews/PerMillion", $node),
+            viewsperuser	=>
+				$xpc->findvalue(".//PageViews/PerUser", $node),
+            reachpermillion	=>
+				$xpc->findvalue(".//Reach/PerMillion", $node),
+            };
+    }
+
+	return @history;
+}
+
 
 sub _request {
     my ( $self, $parms ) = @_;
@@ -340,22 +380,69 @@ the list of images and links found.
     }
   }
 
+=head2 history
+
+The history method returns the daily Alexa Traffic Rank, Reach per
+Million Users, and Unique Page Views per Million Users for each day
+since September 2001. This same data is used to produce the traffic
+graphs found on alexa.com. History takes the URL, and optionally,
+a start date and a count of days. The response contains an aws:Data
+element for each day in the date range specified. Note that no data
+will be returned for days when the daily Alexa traffic rank was
+greater than 100,000.
+
+  my @history = $awis->history(url => 'google.com', start => '20080731', days => 12);
+  foreach my $day (@history) {
+    print "Date: "            . $day->{date} . "\n";
+    print "Rank: "            . $day->{rank} . "\n";
+    print "ViewsPerMillion: " . $day->{viewspermillion} . "\n";
+    print "ViewsPerUser: "    . $day->{viewsperuser} . "\n";
+    print "ReachPerMillion: " . $day->{reachpermillion} . "\n";
+  }
+
 =head1 BUGS AND LIMITATIONS                                                     
                                                                                 
-This module currently does not support "Browse Category" or
-"Historical Traffic" searches.
+This module currently does not support "Browse Category" searches.
                                                                                 
 Please report any bugs or feature requests to                                   
-C<bug-<Net-Amazon-AWIS>@rt.cpan.org>, or through the web interface at                   
+C<bug-Net-Amazon-AWIS@rt.cpan.org>, or through the web interface at                   
 L<http://rt.cpan.org>.  
 
 =head1 AUTHOR
 
 Leon Brocard C<acme@astray.com>
 
+Shevek C<shevek@cpan.org>
+
 =head1 LICENCE AND COPYRIGHT                                                    
                                                                                 
 Copyright (c) 2005-8, Leon Brocard C<acme@astray.com>. All rights reserved.           
+
+Copyright (c) 2008, Shevek C<shevek@cpan.org>. All rights reserved.           
                                                                                 
 This module is free software; you can redistribute it and/or                    
 modify it under the same terms as Perl itself.
+
+=head1 DISCLAIMER OF WARRANTY
+
+    BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
+    FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN
+    OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES
+    PROVIDE THE SOFTWARE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
+    EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE
+    ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH
+    YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL
+    NECESSARY SERVICING, REPAIR, OR CORRECTION.
+
+    IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
+    WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR
+    REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE LIABLE
+    TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL, OR
+    CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE THE
+    SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING
+    RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A
+    FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF
+    SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
+    DAMAGES.
+

@@ -1,5 +1,5 @@
 NAME
-    Net::Amazon::AWIS- Use the Amazon Alexa Web Information Service
+    Net::Amazon::AWIS - Use the Amazon Alexa Web Information Service
 
 SYNOPSIS
       use Net::Amazon::AWIS;
@@ -37,10 +37,10 @@ INTERFACE
 
   new
     The constructor method creates a new Net::Amazon::AWIS object. You must
-    pass in an Amazon Web Services Subscription ID. See
-    http://www.amazon.com/gp/aws/landing.html:
+    pass in an Amazon Web Services Access Key ID and a Secret Access Key.
+    See http://www.amazon.com/gp/aws/landing.html:
 
-      my $sq = Net::Amazon::AWIS->new($subscription_id);
+      my $sq = Net::Amazon::AWIS->new($aws_access_key_id, $secret_access_key);
 
   url_info
     The url_info method provides information about URLs. Examples of this
@@ -77,30 +77,25 @@ INTERFACE
       }
 
   web_map
-    The web_map method provides complete listing of all known links pointing
-    in and links pointing out for any page/URL on the web. Web Maps have
-    been found to be useful when creating new search engine algorithms. As
-    of October 2004, there are 17 billion nodes in the web map, based on 4
-    million text/html pages crawled. For the 4 billion URLs crawled, Amazon
-    will be able to provide both links pointing in and links pointing out
-    information. For the remaining 13 billion URLs, Amazon will only be able
-    to provide links pointing in.
+    The web_map method returns a list of web sites linking to a given web
+    site. Within each domain linking into the web site, only a single link -
+    the one with the highest page-level traffic - is returned. The data is
+    updated once every two months.
 
       my $data = $awis->web_map(url => "http://use.perl.org");
       my @links_in  = $data->{links_in};
-      my @links_out = $data->{links_out};
 
   crawl
     The crawl method returns information about a specific URL as provided by
     the most recent Alexa Web Crawls. Information about the last few times
-    the site URL was crawled is returned.
+    the site URL was crawled is returned. Crawl takes the URL and a count.
 
     Information per crawl include: URL, IP address, date of the crawl (as a
     DateTime object), status code, page length, content type and language.
     In addition, a list of other URLs is included (like "rel" URLs), as is
     the list of images and links found.
 
-      my @results = $awis->crawl(url => "http://use.perl.org");
+      my @results = $awis->crawl(url => "http://use.perl.org", count => 10);
       foreach my $result (@results) {
         print "URL: "          . $result->{url} . "\n";
         print "IP: "           . $result->{ip} . "\n";
@@ -125,95 +120,65 @@ INTERFACE
         }
       }
 
-  search
-    The search method may be used to retrieve a list of search results that
-    match one or more keywords. The Web Search is based on an Alexa index of
-    the web that, as of August 2004, has over 4 billion URLs. Options are as
-    follows:
+  history
+    The history method returns the daily Alexa Traffic Rank, Reach per
+    Million Users, and Unique Page Views per Million Users for each day
+    since September 2001. This same data is used to produce the traffic
+    graphs found on alexa.com. History takes the URL, and optionally, a
+    start date and a count of days. The response contains an aws:Data
+    element for each day in the date range specified. Note that no data will
+    be returned for days when the daily Alexa traffic rank was greater than
+    100,000.
 
-    timeout: Time in milliseconds to wait for a response. to wait for a
-    response. Web Search will attempt to respond with as many results as
-    possible within the timeout period. '0' means inifinite. Default value
-    is '3000'.
-
-    max_results_per_host: Maximum number of results to return from any one
-    site. '0' means no limit. Default value is '5.'
-
-    duplicate_check: set to 'yes' to filter out results that are
-    substantially similar to those already shown. Default value is 'yes'.
-
-    count_only: setting to 'yes' will return only a count of matching sites.
-    Default value is 'no.'
-
-    context: setting to 'yes' will return a Context node beneath each
-    Result, indicating where keyword(s) match within the document. Default
-    value is 'yes.'
-
-    relevance: allows faster searching with weak relevance (0) to slow
-    searching with strong relevance checking (4). Default value is '0.'
-
-    ignore_words: query terms appearing in nore than this percent of all
-    pages in our index will be ignored.
-
-    start: number of result at which to start. Used for paging through
-    results. Default value is '0.'
-
-    count: number of results (maximum) per page to return. Note that the
-    response document may contain fewer results than this maximum. Default
-    value is '10' (maximum 1000).
-
-    adult_filter: filter for adult content. 'Yes' will provide strict
-    filtering of results, showing only sites that are explicitly identified
-    as not adult. 'Moderate' will filter sitse that are identified as adult,
-    but allow unknowns to be included. Default value is 'no.'
-
-    Note: the results from this search seem to be less accurate than other
-    web search engines.
-
-      my @links = $awis->search(query => 'leon brocard');
-      foreach my $link (@links) {
-        my $score = $link->{score};
-        my $uri   = $link->{uri};
-        my $title = $link->{title} || "No title";
-        print "$uri $title ($score)\n";
+      my @history = $awis->history(url => 'google.com', start => '20080731', days => 12);
+      foreach my $day (@history) {
+        print "Date: "            . $day->{date} . "\n";
+        print "Rank: "            . $day->{rank} . "\n";
+        print "ViewsPerMillion: " . $day->{viewspermillion} . "\n";
+        print "ViewsPerUser: "    . $day->{viewsperuser} . "\n";
+        print "ReachPerMillion: " . $day->{reachpermillion} . "\n";
       }
 
 BUGS AND LIMITATIONS
-    No bugs have been reported. This module currently does not support
-    "Category" searches.
+    This module currently does not support "Browse Category" searches.
 
     Please report any bugs or feature requests to
-    "bug-<Net-Amazon-AWIS"@rt.cpan.org>, or through the web interface at
+    "bug-Net-Amazon-AWIS@rt.cpan.org", or through the web interface at
     <http://rt.cpan.org>.
 
 AUTHOR
     Leon Brocard "acme@astray.com"
 
+    Shevek "shevek@cpan.org"
+
 LICENCE AND COPYRIGHT
-    Copyright (c) 2005, Leon Brocard "acme@astray.com". All rights reserved.
+    Copyright (c) 2005-8, Leon Brocard "acme@astray.com". All rights
+    reserved.
+
+    Copyright (c) 2008, Shevek "shevek@cpan.org". All rights reserved.
 
     This module is free software; you can redistribute it and/or modify it
     under the same terms as Perl itself.
 
 DISCLAIMER OF WARRANTY
-    BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
-    FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN
-    OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES
-    PROVIDE THE SOFTWARE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
-    EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE
-    ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH
-    YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL
-    NECESSARY SERVICING, REPAIR, OR CORRECTION.
+        BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
+        FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN
+        OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES
+        PROVIDE THE SOFTWARE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
+        EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+        WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE
+        ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH
+        YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL
+        NECESSARY SERVICING, REPAIR, OR CORRECTION.
 
-    IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
-    WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR
-    REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE LIABLE
-    TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL, OR
-    CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE THE
-    SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING
-    RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A
-    FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF
-    SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
-    DAMAGES.
+        IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
+        WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR
+        REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE LIABLE
+        TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL, OR
+        CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE THE
+        SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING
+        RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A
+        FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF
+        SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
+        DAMAGES.
 

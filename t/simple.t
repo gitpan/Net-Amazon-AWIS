@@ -19,7 +19,9 @@ eval {
     alarm 0;
 };
 
-if ( $aws_access_key_id && $secret_access_key ) {
+if ( $aws_access_key_id && $secret_access_key
+		&& length $aws_access_key_id->{value}
+		&& length $secret_access_key->{value} ) {
     eval 'use Test::More tests => 22;';
 } else {
     eval
