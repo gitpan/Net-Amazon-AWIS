@@ -5,6 +5,13 @@ WriteMakefile(
 	'NAME'		=> 'Net::Amazon::AWIS',
 	'VERSION_FROM'	=> 'lib/Net/Amazon/AWIS.pm',
 	'PREREQ_PM'		=> {
+		'IO::Prompt'					=> 0,
+		'DateTime::Format::Strptime'	=> 0,
+		'Digest::HMAC_SHA1'				=> 0,
+		'IO::Prompt'					=> 0,
+		'LWP::UserAgent'				=> 0,
+		'URI'							=> 0,
+		'XML::LibXML'					=> 0,
 			},
 	ABSTRACT_FROM => 'lib/Net/Amazon/AWIS.pm',
 	AUTHOR		=> 'Shevek <cpan@anarres.org>',
