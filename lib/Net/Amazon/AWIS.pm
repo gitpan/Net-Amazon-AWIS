@@ -10,7 +10,7 @@ use Digest::HMAC_SHA1;
 use POSIX qw( strftime );
 use base qw(Class::Accessor::Fast);
 __PACKAGE__->mk_accessors(qw(libxml aws_access_key_id secret_access_key ua));
-our $VERSION = "0.35";
+our $VERSION = "0.36";
 
 sub new {
     my ( $class, $aws_access_key_id, $secret_access_key ) = @_;

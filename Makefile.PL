@@ -12,6 +12,7 @@ WriteMakefile(
 		'LWP::UserAgent'				=> 0,
 		'URI'							=> 0,
 		'XML::LibXML'					=> 0,
+		'Test::Exception'				=> 0,
 			},
 	ABSTRACT_FROM => 'lib/Net/Amazon/AWIS.pm',
 	AUTHOR		=> 'Shevek <cpan@anarres.org>',
